@@ -179,7 +179,7 @@ def mqtt_publish(message):
     try:
         # Set up MQTT client and connect
         client = setup_mqtt_client(MQTT_BROKER, MQTT_CLIENT_ID)
-        print('successfully connected to mqtt')
+        #print('successfully connected to mqtt')
         client.publish(MQTT_TOPIC, message)
         print(f"Message '{message}' published to topic '{MQTT_TOPIC}'")
         # Disconnect MQTT
