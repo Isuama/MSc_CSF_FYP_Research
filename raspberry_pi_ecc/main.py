@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+import influxdb_client
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 from tinyec import registry
