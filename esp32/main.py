@@ -12,7 +12,7 @@ import requests
 
 # Constants - WiFi
 WIFI_SSID = 'SLT-Fiber-2.4G'
-WIFI_PASSWORD = ''
+WIFI_PASSWORD = '0759360576'
 
 # Constants - ECC Key genertation
 ECC_BASE_ENDPOINT = "http://192.168.1.13:5000/"
@@ -47,7 +47,7 @@ def connect_wifi(ssid, password):
             while not wlan.isconnected():
                 pass
         # Print network configuration on a successfull connection
-        print('Network config:', wlan.ifconfig())
+        #print('Successfully Connected to the Network. Network config:', wlan.ifconfig())
     except Exception as e:
         print("Failed to connect to the Wi-Fi:", e)
         return None
@@ -81,7 +81,7 @@ def generate_ecc_key():
         data = {'timestamp_in_ms': current_time_milliseconds}
         # Send POST request to get the ecc key status
         status = send_post_request_for_status(url, data)
-        print("ECC key geenration status and timestamp", status, current_time_milliseconds)
+        #print("ECC key geenration status and timestamp", status, current_time_milliseconds)
         return status,current_time_milliseconds
     except Exception as e:
         print("Exception occuered while generating ECC key:", e)
@@ -179,9 +179,9 @@ def mqtt_publish(message):
     try:
         # Set up MQTT client and connect
         client = setup_mqtt_client(MQTT_BROKER, MQTT_CLIENT_ID)
-        #print('successfully connected to mqtt')
+        print('successfully connected to mqtt')
         client.publish(MQTT_TOPIC, message)
-        #print(f"Message '{message}' published to topic '{MQTT_TOPIC}'")
+        print(f"Message '{message}' published to topic '{MQTT_TOPIC}'")
         # Disconnect MQTT
         client.disconnect()
     except Exception as e:
@@ -208,7 +208,7 @@ def main():
         sensor = dht.DHT11(Pin(DHT_11_PIN))
         while True:
             json_result = connect_dht11(sensor)
-            print("Raw data collected: ",json_result)
+            #print("Raw data collected: ",json_result)
             
             # Raw data encryption starts
             # STEP-01 - generate the key and save in influxdb - execute outside function to generate ecc-key for a given timestamp
@@ -216,7 +216,7 @@ def main():
             if status == 	"success": # success means, key is generated and succefully added to the influx db
                 # retreive the key from influxdb for the given timestamp
                 key = get_key_from_influxdb(current_time_milliseconds)
-                #print("key is collected",key)
+                # print("key is collected: ",key)
             else:
                 print("error on retreiving key")
                 break
@@ -227,21 +227,23 @@ def main():
 
             # STEP-02 - encrypt the message using the generated key
             encrypted_message = encrypt_message(json_result,int(key))
-            print("Raw data encrypted successfully", encrypted_message)
+            #print("Raw data encrypted successfully. : ", encrypted_message)
 
             # Decrypt the message - This is not executed in the ESP32, but for the testing purposes
             # append timestamp to the encrypted message
             encrypted_message_with_timestamp = encrypted_message+str(current_time_milliseconds)
+            #print("encrypted message append with the timestamp: ", encrypted_message_with_timestamp)
             # Extract timestamp and encrypted message for the decryption process
             extracted_encrypted_message = encrypted_message_with_timestamp[:-12]
             extracted_timestamp = get_key_from_influxdb(str(encrypted_message_with_timestamp[-12:]))
-            print("Extracted encrypted message: ",extracted_encrypted_message)
-            print("Extracted timestamp: ",extracted_timestamp)
-            print("Decrypted message: ",decrypt_message(extracted_encrypted_message,int(extracted_timestamp)))
+            #print("Extracted encrypted message: ",extracted_encrypted_message)
+            #print("Extracted timestamp: ",extracted_timestamp)
+            #print("Decrypted message: ",decrypt_message(extracted_encrypted_message,int(extracted_timestamp)))
             
             # Publish encrypted message with the timestamp attached to it
             # encode message prior transmitting to achieve the accuracy
             encoded_message = encrypted_message_with_timestamp.encode('utf-8')
+            #print("encode message to publish via mqtt: ", encoded_message)
             # publish encoded message via mqtt
             mqtt_publish(encoded_message)
     except Exception as e:
