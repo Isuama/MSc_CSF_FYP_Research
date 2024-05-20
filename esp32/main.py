@@ -18,17 +18,17 @@ WIFI_PASSWORD = '0759360576'
 ECC_BASE_ENDPOINT = "http://192.168.1.13:5000/"
 
 # Constants - MQTT
-MQTT_BROKER = '192.168.1.2'
+MQTT_BROKER = '192.168.1.11'
 MQTT_PORT = 1883
 MQTT_TOPIC = 'w1956340/fyp_research'
 MQTT_CLIENT_ID = 'esp32_client'
 
 # Constants - Sensors
 DHT_11_PIN = 23
-DHT_11_SLEEP_TIME = 4 # collect data on every 4 seconds
+DHT_11_SLEEP_TIME = 3# collect data on every 4 seconds
 
 # Constant -  InfluxDB
-INFLUX_ENDPOINT = "http://192.168.1.2:8086/"
+INFLUX_ENDPOINT = "http://192.168.1.11:8086/"
 BUCKET = "fyp_research"
 START = "-1h" 
 MEASUREMENT = "esp32_measurement"
@@ -47,7 +47,7 @@ def connect_wifi(ssid, password):
             while not wlan.isconnected():
                 pass
         # Print network configuration on a successfull connection
-        #print('Successfully Connected to the Network. Network config:', wlan.ifconfig())
+        print('Successfully Connected to the Network. Network config:', wlan.ifconfig())
     except Exception as e:
         print("Failed to connect to the Wi-Fi:", e)
         return None
@@ -192,7 +192,7 @@ def setup_mqtt_client(server, client_id):
     try:
         client = MQTTClient(client_id, server, port=MQTT_PORT)
         client.connect()
-        #print(f"Connected to MQTT Broker on {server}")
+        print(f"Connected to MQTT Broker on {server}")
         return client
     except Exception as e:
         print("Exception occuered while connecting to the mqtt client:", e)
@@ -208,7 +208,7 @@ def main():
         sensor = dht.DHT11(Pin(DHT_11_PIN))
         while True:
             json_result = connect_dht11(sensor)
-            #print("Raw data collected: ",json_result)
+            print("Raw data collected: ",json_result)
             
             # Raw data encryption starts
             # STEP-01 - generate the key and save in influxdb - execute outside function to generate ecc-key for a given timestamp
@@ -227,12 +227,12 @@ def main():
 
             # STEP-02 - encrypt the message using the generated key
             encrypted_message = encrypt_message(json_result,int(key))
-            #print("Raw data encrypted successfully. : ", encrypted_message)
+            print("Raw data encrypted successfully. : ", encrypted_message)
 
             # Decrypt the message - This is not executed in the ESP32, but for the testing purposes
             # append timestamp to the encrypted message
             encrypted_message_with_timestamp = encrypted_message+str(current_time_milliseconds)
-            #print("encrypted message append with the timestamp: ", encrypted_message_with_timestamp)
+            print("encrypted message append with the timestamp: ", encrypted_message_with_timestamp)
             # Extract timestamp and encrypted message for the decryption process
             extracted_encrypted_message = encrypted_message_with_timestamp[:-12]
             extracted_timestamp = get_key_from_influxdb(str(encrypted_message_with_timestamp[-12:]))
@@ -243,7 +243,7 @@ def main():
             # Publish encrypted message with the timestamp attached to it
             # encode message prior transmitting to achieve the accuracy
             encoded_message = encrypted_message_with_timestamp.encode('utf-8')
-            #print("encode message to publish via mqtt: ", encoded_message)
+            print("encode message to publish via mqtt: ", encoded_message)
             # publish encoded message via mqtt
             mqtt_publish(encoded_message)
     except Exception as e:
