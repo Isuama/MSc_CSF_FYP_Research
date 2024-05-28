@@ -1,5 +1,6 @@
 import hashlib
 import random
+from ucryptolib import aes
 
 # Simple elliptic curve parameters
 p = 23  # prime number
@@ -96,61 +97,49 @@ def generate_keypair():
     public_key = scalar_multiplication(private_key, G)
     return private_key, public_key
 
-def compress_point(point):
-    return (point.x, point.y % 2)
+# Symmetric encryption using AES in CBC mode
+def encrypt_aes_cbc(key, iv, plaintext):
+    cipher = aes(key, 2, iv)  # AES-128 in CBC mode
+    while len(plaintext) % 16 != 0:
+        plaintext += b' '  # Padding to 16 bytes
+    ciphertext = cipher.encrypt(plaintext)
+    return ciphertext
 
-def decompress_point(x, y_parity):
-    y_square = (x**2 + a * x + b) % p
-    y_root = pow(y_square, (p + 1) // 4, p)  # p ≡ 3 (mod 4) optimization
-    if y_root % 2 != y_parity:
-        y_root = p - y_root
-    return Point(x, y_root)
+def decrypt_aes_cbc(key, iv, ciphertext):
+    cipher = aes(key, 2, iv)  # AES-128 in CBC mode
+    plaintext = cipher.decrypt(ciphertext)
+    return plaintext.rstrip(b' ')
 
-def map_message_to_point_koblitz(message):
-    """Map a message to an ECC point using Koblitz's method."""
-    counter = 0
-    while True:
-        hasher = hashlib.sha256()
-        hasher.update(message.encode('utf-8') + counter.to_bytes(1, 'big'))
-        x = int.from_bytes(hasher.digest(), 'big') % p
-        y_square = (x**2 + a * x + b) % p
-        try:
-            y = pow(y_square, (p + 1) // 4, p)
-            if (y * y) % p == y_square:
-                return Point(x, y), counter
-        except ValueError:
-            pass
-        counter += 1
+# ECIES encryption using AES-CBC
+def ecies_encrypt(public_key, message):
+    ephemeral_private_key, ephemeral_public_key = generate_keypair()
+    shared_secret = scalar_multiplication(ephemeral_private_key, public_key).x
+    shared_secret_bytes = shared_secret.to_bytes(16, 'big')
+    
+    # Generate a random IV for AES-CBC
+    iv = random.randint(0, 2**128 - 1).to_bytes(16, 'big')
+    
+    ciphertext = encrypt_aes_cbc(shared_secret_bytes, iv, message.encode('utf-8'))
+    return ephemeral_public_key, iv, ciphertext
 
-def point_to_message_koblitz(point, message):
-    """Recover the message from the ECC point using Koblitz's method."""
-    x = point.x
-    counter = 0
-    while True:
-        hasher = hashlib.sha256()
-        hasher.update(message.encode('utf-8') + counter.to_bytes(1, 'big'))
-        test_digest = int.from_bytes(hasher.digest(), 'big') % p
-        if test_digest == x:
-            return message
-        counter += 1
-    return None
+# ECIES decryption using AES-CBC
+def ecies_decrypt(private_key, ephemeral_public_key, iv, ciphertext):
+    shared_secret = scalar_multiplication(private_key, ephemeral_public_key).x
+    shared_secret_bytes = shared_secret.to_bytes(16, 'big')
+    plaintext = decrypt_aes_cbc(shared_secret_bytes, iv, ciphertext)
+    return plaintext.decode('utf-8')
 
 # Example usage
 private_key, public_key = generate_keypair()
 print(f"Private Key: {private_key}")
 print(f"Public Key: ({public_key.x}, {public_key.y})")
 
-message = "Hello ammata hufu{}"
-point, counter = map_message_to_point_koblitz(message)
-print(f"Mapped Point: {point}")
+message = "Hello, ECC!"
 
-# Compress and decompress the point (optional)
-compressed = compress_point(point)
-print(f"Compressed Point: {compressed}")
+# Encrypt the message
+ephemeral_public_key, iv, ciphertext = ecies_encrypt(public_key, message)
+print(f"Ciphertext: {ciphertext}")
 
-decompressed = decompress_point(compressed[0], compressed[1])
-print(f"Decompressed Point: ({decompressed.x}, {decompressed.y})")
-
-# Recover the message from the point
-recovered_message = point_to_message_koblitz(point, message)
-print(f"Recovered Message: {recovered_message}")
+# Decrypt the message
+decrypted_message = ecies_decrypt(private_key, ephemeral_public_key, iv, ciphertext)
+print(f"Decrypted Message: {decrypted_message}")
