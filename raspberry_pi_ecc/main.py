@@ -1,18 +1,23 @@
 from flask import Flask, request, jsonify
 import influxdb_client
-from influxdb_client import InfluxDBClient
+from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from tinyec import registry
 import secrets
 
 # Constants - InfluxDB
-INFLUX_URL = "http://192.168.1.2:8086"
+INFLUX_URL = "http://192.168.1.14:8086"
 BUCKET = "fyp_research"
 START = "-1h"
 MEASUREMENT = "esp32_measurement"
 FIELD = "secret_key"
 ORG = "UoW"
 TOKEN = "9UebI5yEvAYTM-AjI6LGVvsgfa3k_SllX_4K9AB9Y9zvQWHLIJniI5-zfvu8v0SVU8pHK-ZejBMmAunAn-jBNA=="
+
+#encryption stats - influx db
+ENC_MEM_MEASUREMENT = "memory"
+ENC_CPU_MEASUREMENT = "cpu"
+ENC_TASK_MEASUREMENT = "task"
 
 def create_key_pair(curve_name):
   try:
@@ -34,6 +39,45 @@ def get_ecc_encryption_key():
   except Exception as e:
     print(f"An error occurred while generating ecc key: {e}")
 
+def write_encryption_stats(data):
+  try:
+    client = InfluxDBClient(url=INFLUX_URL, token=TOKEN, org=ORG)
+    write_api = client.write_api(write_options=SYNCHRONOUS)
+    total_memory = data.get('total_memory')
+    free_memory = data.get('free_memory')
+    used_memory = data.get('used_memory')
+    memory_usage_percentage = data.get('memory_usage_percentage')
+    print(total_memory,free_memory,used_memory,memory_usage_percentage)
+
+    point_memory = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("total_memory", total_memory) \
+    .tag("free_memory",free_memory) \
+    .tag("used_memory",used_memory) \
+    .tag("memory_usage_percentage",memory_usage_percentage) \
+    .field("device","esp-32")
+    point_memory_1 = Point(ENC_MEM_MEASUREMENT).tag("memory","memory") \
+    .field("total_memory",data.get('total_memory')) \
+    .field("free_memory",data.get('free_memory')) \
+    .field("used_memory",data.get('used_memory')) \
+    .field("memory_usage_percentage",data.get('memory_usage_percentage'))
+
+    point_cpu = Point(ENC_CPU_MEASUREMENT).tag("cpu","cpu") \
+    .field("cpu_freq",data.get('cpu_freq')) \
+    .field("cpu_usage_percentage",data.get('cpu_freq')) \
+    
+    point_task = Point(ENC_TASK_MEASUREMENT).tag("task","task") \
+    .field("task_duration",data.get('task_duration'))    
+    
+    write_api.write(bucket="fyp_stats", org=ORG, record=point_memory)
+    #write_api.write(bucket=BUCKET, org=ORG, record=point_cpu)
+    #write_api.write(bucket=BUCKET, org=ORG, record=point_task)
+
+    print('stats data successfully added to the influxdb:')
+    return True
+  except Exception as e:
+    print(f"An error occurred while writing stats data: {e}")
+    return False
+  finally:
+    client.close()
 def write_data(timestamp_in_ms,secret_key):
   try:
     # Create a client object
@@ -79,6 +123,18 @@ def get_key_influxdb(timestamp_in_ms):
       client.close()
 
 app = Flask(__name__)
+@app.route('/api/enc_status',methods=['POST'])
+def api_enc_status_data():
+  try:
+    data = request.get_json()
+    if(write_encryption_stats(data)):
+      data = {'status': "success"}
+    else:
+      data = {'status': "fail"}
+    return jsonify(data)
+  except Exception as e:
+    print(f"An error occurred in API get key: {e}")
+
 @app.route('/api/status',methods=['POST'])
 def api_status_data():
   try:
