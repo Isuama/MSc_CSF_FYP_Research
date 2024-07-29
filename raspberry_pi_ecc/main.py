@@ -5,7 +5,6 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from tinyec import registry
 import secrets
 import time
-import psutil
 
 # Constants - InfluxDB
 INFLUX_URL = "http://192.168.1.14:8086"
@@ -67,12 +66,19 @@ def write_encryption_stats(data):
     write_api.write(bucket="fyp_stats", org=ORG, record=memory_usage_percentage)
 
     #cpu measurement -esp32
-    cpu_freq = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_freq").field("cpu_freq", cpu_freq)
-    write_api.write(bucket="fyp_stats", org=ORG, record=cpu_freq)
+    cpu_freq = data.get('cpu_freq')
+    cpu_freq_record = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_freq").field("cpu_freq", cpu_freq)
+    write_api.write(bucket="fyp_stats", org=ORG, record=cpu_freq_record)
 
-    cpu_usage_percentage = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_usage_percentage").field("cpu_usage_percentage", cpu_usage_percentage)
-    write_api.write(bucket="fyp_stats", org=ORG, record=cpu_usage_percentage)
-    
+    cpu_usage_percentage = data.get('cpu_usage_percentage')
+    cpu_usage_percentage_record = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_usage_percentage").field("cpu_usage_percentage", cpu_usage_percentage)
+    write_api.write(bucket="fyp_stats", org=ORG, record=cpu_usage_percentage_record)
+
+    # task measurement
+    encryption_time = data.get('task_duration')
+    encryption_time_record = influxdb_client.Point(ENC_TASK_MEASUREMENT).tag("device","esp-32").tag("type","encryption_time").field("encryption_time", encryption_time)
+    write_api.write(bucket="fyp_stats", org=ORG, record=encryption_time_record)
+
     print('stats data successfully added to the influxdb:')
     return True
   except Exception as e:

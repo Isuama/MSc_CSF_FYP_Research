@@ -82,32 +82,35 @@ def write_measurement(execution_time):
         memory_info = get_memory_info()
 
         total_memory = memory_info['total_memory']
-        total_memory_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","total_memory").field("total_memory", total_memory)
+        total_memory_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","total_memory").field("total_memory", total_memory)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=total_memory_record)
 
         available_memory = memory_info['available_memory']
-        available_memory_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","available_memory").field("available_memory", available_memory)
+        available_memory_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","available_memory").field("available_memory", available_memory)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=available_memory_record)
 
         used_memory = memory_info['used_memory']
-        used_memory_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","used_memory").field("used_memory", used_memory)
+        used_memory_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","used_memory").field("used_memory", used_memory)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=used_memory_record)
 
         memory_percent = memory_info['memory_percent']
-        memory_percent_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","memory_percent").field("memory_percent", memory_percent)
+        memory_percent_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","memory_percent").field("memory_percent", memory_percent)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=memory_percent_record)
 
         total_swap = memory_info['total_swap']
-        total_swap_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","total_swap").field("total_swap", total_swap)
+        total_swap_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","total_swap").field("total_swap", total_swap)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=total_swap_record)
 
         used_swap = memory_info['used_swap']
-        used_swap_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","used_swap").field("used_swap", used_swap)
+        used_swap_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","used_swap").field("used_swap", used_swap)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=used_swap_record)
 
         swap_percent = memory_info['swap_percent']
-        swap_percent_record = influxdb_client.Point(DEC_CPU_MEASUREMENT).tag("device","raspberry").tag("type","swap_percent").field("swap_percent", swap_percent)
+        swap_percent_record = influxdb_client.Point(DEC_MEM_MEASUREMENT).tag("device","raspberry").tag("type","swap_percent").field("swap_percent", swap_percent)
         write_api.write(bucket=STATS_BUCKET, org=ORG, record=swap_percent_record)
+
+        decryption_time_record = influxdb_client.Point(DEC_TASK_MEASUREMENT).tag("device","raspberry").tag("type","decryption_time").field("decryption_time", execution_time)
+        write_api.write(bucket=STATS_BUCKET, org=ORG, record=decryption_time_record)
 
         """
         print("\nMemory Information:")
@@ -119,7 +122,7 @@ def write_measurement(execution_time):
         print(f"Used Swap: {memory_info['used_swap'] / (1024**2):.2f} MB")
         print(f"Swap Usage: {memory_info['swap_percent']}%")
         """
-
+        print("measurement successfully written")
     except Exception as e:
         print(f"An error occurred on the subscribed message: {e}")
 
@@ -141,7 +144,7 @@ def on_message(client, userdata, received_message):
         # Decrypt message
         print("Decryptd message: ",decrypt_message(extracted_encrypted_message,int(decryption_key)))
         end_time = time.time()
-        execution_time = start_time - end_time
+        execution_time = end_time - start_time
         write_measurement(execution_time)
 
     except Exception as e:
