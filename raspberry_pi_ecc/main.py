@@ -4,6 +4,8 @@ from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from tinyec import registry
 import secrets
+import time
+import psutil
 
 # Constants - InfluxDB
 INFLUX_URL = "http://192.168.1.14:8086"
@@ -49,27 +51,27 @@ def write_encryption_stats(data):
     memory_usage_percentage = data.get('memory_usage_percentage')
     print(total_memory,free_memory,used_memory,memory_usage_percentage)
 
-    point_memory = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("total_memory", total_memory) \
-    .tag("free_memory",free_memory) \
-    .tag("used_memory",used_memory) \
-    .tag("memory_usage_percentage",memory_usage_percentage) \
-    .field("device","esp-32")
-    point_memory_1 = Point(ENC_MEM_MEASUREMENT).tag("memory","memory") \
-    .field("total_memory",data.get('total_memory')) \
-    .field("free_memory",data.get('free_memory')) \
-    .field("used_memory",data.get('used_memory')) \
-    .field("memory_usage_percentage",data.get('memory_usage_percentage'))
+    # memory measurement
+    total_memory = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("device","esp-32").tag("type","total_memory").field("total_memory", total_memory)
+    write_api.write(bucket="fyp_stats", org=ORG, record=total_memory)
+    
+    free_memory = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("device","esp-32").tag("type","free_memory").field("free_memory", free_memory)
+    write_api.write(bucket="fyp_stats", org=ORG, record=free_memory)
+    
+    used_memory = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("device","esp-32").tag("type","used_memory").field("used_memory", used_memory)
+    write_api.write(bucket="fyp_stats", org=ORG, record=used_memory)
+    
+    memory_usage_percentage = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("device","esp-32").tag("type","memory_usage_percentage").field("memory_usage_percentage", memory_usage_percentage)
+    write_api.write(bucket="fyp_stats", org=ORG, record=memory_usage_percentage)
 
-    point_cpu = Point(ENC_CPU_MEASUREMENT).tag("cpu","cpu") \
-    .field("cpu_freq",data.get('cpu_freq')) \
-    .field("cpu_usage_percentage",data.get('cpu_freq')) \
-    
-    point_task = Point(ENC_TASK_MEASUREMENT).tag("task","task") \
-    .field("task_duration",data.get('task_duration'))    
-    
-    write_api.write(bucket="fyp_stats", org=ORG, record=point_memory)
-    #write_api.write(bucket=BUCKET, org=ORG, record=point_cpu)
-    #write_api.write(bucket=BUCKET, org=ORG, record=point_task)
+    #cpu measurement
+    cpu_freq = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_freq").field("cpu_freq", cpu_freq)
+    write_api.write(bucket="fyp_stats", org=ORG, record=cpu_freq)
+
+    cpu_usage_percentage = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_usage_percentage").field("cpu_usage_percentage", cpu_usage_percentage)
+    write_api.write(bucket="fyp_stats", org=ORG, record=cpu_usage_percentage)
+
+
 
     print('stats data successfully added to the influxdb:')
     return True
