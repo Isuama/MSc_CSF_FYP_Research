@@ -40,28 +40,7 @@ def get_ecc_encryption_key():
     return primary_secret
   except Exception as e:
     print(f"An error occurred while generating ecc key: {e}")
-def get_cpu_info():
-    cpu_percent = psutil.cpu_percent(interval=1)
-    cpu_cores = psutil.cpu_count(logical=False)
-    cpu_threads = psutil.cpu_count(logical=True)
-    return {
-        "cpu_percent": cpu_percent,
-        "cpu_cores": cpu_cores,
-        "cpu_threads": cpu_threads
-    }
 
-def get_memory_info():
-    virtual_mem = psutil.virtual_memory()
-    swap_mem = psutil.swap_memory()
-    return {
-        "total_memory": virtual_mem.total,
-        "available_memory": virtual_mem.available,
-        "used_memory": virtual_mem.used,
-        "memory_percent": virtual_mem.percent,
-        "total_swap": swap_mem.total,
-        "used_swap": swap_mem.used,
-        "swap_percent": swap_mem.percent
-    }
 def write_encryption_stats(data):
   try:
     client = InfluxDBClient(url=INFLUX_URL, token=TOKEN, org=ORG)
@@ -72,7 +51,9 @@ def write_encryption_stats(data):
     memory_usage_percentage = data.get('memory_usage_percentage')
     print(total_memory,free_memory,used_memory,memory_usage_percentage)
 
-    # memory measurement
+    # task measurement
+
+    # memory measurement - esp32
     total_memory = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("device","esp-32").tag("type","total_memory").field("total_memory", total_memory)
     write_api.write(bucket="fyp_stats", org=ORG, record=total_memory)
     
@@ -85,30 +66,13 @@ def write_encryption_stats(data):
     memory_usage_percentage = influxdb_client.Point(ENC_MEM_MEASUREMENT).tag("device","esp-32").tag("type","memory_usage_percentage").field("memory_usage_percentage", memory_usage_percentage)
     write_api.write(bucket="fyp_stats", org=ORG, record=memory_usage_percentage)
 
-    #cpu measurement
+    #cpu measurement -esp32
     cpu_freq = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_freq").field("cpu_freq", cpu_freq)
     write_api.write(bucket="fyp_stats", org=ORG, record=cpu_freq)
 
     cpu_usage_percentage = influxdb_client.Point(ENC_CPU_MEASUREMENT).tag("device","esp-32").tag("type","cpu_usage_percentage").field("cpu_usage_percentage", cpu_usage_percentage)
     write_api.write(bucket="fyp_stats", org=ORG, record=cpu_usage_percentage)
-
-    cpu_info = get_cpu_info()
-memory_info = get_memory_info()
-
-print("CPU Information:")
-print(f"CPU Usage: {cpu_info['cpu_percent']}%")
-print(f"CPU Cores: {cpu_info['cpu_cores']}")
-print(f"CPU Threads: {cpu_info['cpu_threads']}")
-
-print("\nMemory Information:")
-print(f"Total Memory: {memory_info['total_memory'] / (1024**2):.2f} MB")
-print(f"Available Memory: {memory_info['available_memory'] / (1024**2):.2f} MB")
-print(f"Used Memory: {memory_info['used_memory'] / (1024**2):.2f} MB")
-print(f"Memory Usage: {memory_info['memory_percent']}%")
-print(f"Total Swap: {memory_info['total_swap'] / (1024**2):.2f} MB")
-print(f"Used Swap: {memory_info['used_swap'] / (1024**2):.2f} MB")
-print(f"Swap Usage: {memory_info['swap_percent']}%")
-
+    
     print('stats data successfully added to the influxdb:')
     return True
   except Exception as e:
