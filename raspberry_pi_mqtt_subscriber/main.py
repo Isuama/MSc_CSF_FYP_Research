@@ -2,7 +2,7 @@ import paho.mqtt.client as mqtt
 import requests
 
 # Constants - InfluxDB
-INFLUX_ENDPOINT = "http://192.168.1.2:8086/"
+INFLUX_ENDPOINT = "http://192.168.1.14:8086/"
 BUCKET = "fyp_research"
 START = "-1h"
 MEASUREMENT = "esp32_measurement"
@@ -11,7 +11,7 @@ ORG = "UoW"
 TOKEN = "9UebI5yEvAYTM-AjI6LGVvsgfa3k_SllX_4K9AB9Y9zvQWHLIJniI5-zfvu8v0SVU8pHK-ZejBMmAunAn-jBNA=="
 
 # Constant - MQTT
-MQTT_BROKER = "192.168.1.2"
+MQTT_BROKER = "192.168.1.14"
 MQTT_PORT = 1883
 MQTT_TOPIC = "w1956340/fyp_research"
 
